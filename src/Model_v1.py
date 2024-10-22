@@ -89,3 +89,7 @@ for epoch in range(num_epochs):
 
 # 保存模型
 torch.save(model.state_dict(), 'transformer_model.pth')
+
+
+
+
