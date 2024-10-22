@@ -109,8 +109,6 @@ class StockDataset(Dataset):
 
 
 
-
-
 def main():
     batch_size=32
     train_db = StockDataset(mode="train", dim_x=9)
