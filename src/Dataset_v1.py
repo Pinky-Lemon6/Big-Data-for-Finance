@@ -20,7 +20,7 @@ class StockDataset(Dataset):
         self.file_list_name = os.path.join(self.root, "file_list.csv") # file_list.txt存放每只股票数据的文件名
         self.load_dataset()
 
-        self.len = 0
+        self.len = -1
         with open(os.path.join(self.root, self.file_list_name), "r") as f:
             for line in f:
                 self.len += 1
@@ -61,7 +61,7 @@ class StockDataset(Dataset):
                     data = data[data.date<self.split_date]
                     data = data.sort_values(by = "date", ascending=True).reset_index()
                     for i in range(self.dim_x, len(data)-self.dim_x-1, 1):
-                        x = data.loc[i:i+self.dim_x+1, "close"].to_list() # X=x[:-1], y=x[-1]
+                        x = data.loc[i:i+self.dim_x, "close"].to_list() # X=x[:-1], y=x[-1]
                         with open(os.path.join(self.root, dataset_name), "a") as f:
                             f.write(",".join([str(i) for i in x]))
                             f.write("\n")
@@ -80,7 +80,7 @@ class StockDataset(Dataset):
                     data = data[data.date>=self.split_date]
                     data = data.sort_values(by = "date", ascending=True).reset_index()
                     for i in range(self.dim_x, len(data)-self.dim_x-1, 1):
-                        x = data.loc[i:i+self.dim_x+1, "close"].to_list() # X=x[:-1], y=x[-1]
+                        x = data.loc[i:i+self.dim_x, "close"].to_list() # X=x[:-1], y=x[-1]
                         with open(os.path.join(self.root, dataset_name), "a") as f:
                             f.write(",".join([str(i) for i in x]))
                             f.write("\n")
@@ -99,7 +99,7 @@ class StockDataset(Dataset):
         with open(os.path.join(self.root, self.dataset_name)) as f:
             for line in f:
                 line = line.strip("\n")
-                if cnt == idx & len(line):
+                if cnt == idx:
                     x = [float(i) for i in line.split(",")[:-1]]
                     y = float(line.split(",")[-1])
                     X = torch.tensor(x).to(torch.float32)
