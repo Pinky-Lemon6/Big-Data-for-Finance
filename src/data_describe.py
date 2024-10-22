@@ -19,13 +19,13 @@ data["month"] = data["date"].apply(lambda x: int(x.split("-")[1]))
 data["day"] = data["date"].apply(lambda x: int(x.split("-")[2]))
 data_out = data.sort_values(by = ["year", "month", "day"], ascending=True).reset_index()
 data_out = data_out[["date", "open", "high", "low", "close", "volume", "Name"]]
-if not os.path.isdir(data_out_dir):
+if not os.path.isfile(data_out_dir):
     data_out.to_csv(data_out_dir, index=False)
 x = data.groupby(["year", "month", "day", "date"]).size().reset_index()
 x.columns = ["year", "month", "day", "date", "cnt"]
 x = x.sort_values(by = ["year", "month", "day"], ascending=True)
 # print(x.head())
-if not os.path.isdir("data_describe.txt"):
+if not os.path.exists("data_describe.txt"):
     with open("data_describe.txt", "w") as f:
         for i in range(x.shape[0]):
             f.write(x.loc[i, "date"])
