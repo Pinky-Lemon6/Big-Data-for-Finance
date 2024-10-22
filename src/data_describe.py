@@ -11,7 +11,7 @@ pd.set_option('display.max_rows', None)
 
 
 data_dir = os.path.join(current_directory, "../Dataset/S&P500/all_stocks_5yr.csv")
-data_out_dir = os.path.join(current_directory, "../Dataset/S&P500/all_stocks_5yr_clean.csv")
+# data_out_dir = os.path.join(current_directory, "../Dataset/S&P500/all_stocks_5yr_clean.csv")
 data = pd.read_csv(data_dir).dropna()
 # print(data.head())
 data["year"] = data["date"].apply(lambda x: int(x.split("-")[0]))
@@ -19,8 +19,8 @@ data["month"] = data["date"].apply(lambda x: int(x.split("-")[1]))
 data["day"] = data["date"].apply(lambda x: int(x.split("-")[2]))
 data_out = data.sort_values(by = ["year", "month", "day"], ascending=True).reset_index()
 data_out = data_out[["date", "open", "high", "low", "close", "volume", "Name"]]
-if not os.path.isfile(data_out_dir):
-    data_out.to_csv(data_out_dir, index=False)
+# if not os.path.isfile(data_out_dir):
+#     data_out.to_csv(data_out_dir, index=False)
 x = data.groupby(["year", "month", "day", "date"]).size().reset_index()
 x.columns = ["year", "month", "day", "date", "cnt"]
 x = x.sort_values(by = ["year", "month", "day"], ascending=True)
