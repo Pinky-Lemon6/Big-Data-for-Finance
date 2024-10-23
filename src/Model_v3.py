@@ -14,36 +14,74 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=nlayers)
         self.pos_encoder = PositionalEncoding(d_model, dropout, max_len)
         self.input_linear = nn.Linear(1, d_model)  # 将1维输入映射到d_model维
+        self.input_embedding = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=d_model)
         
         # Decoder部分
         self.decoder_layer = nn.TransformerDecoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_hid, dropout=dropout)
+        
         self.transformer_decoder = nn.TransformerDecoder(self.decoder_layer, num_layers=nlayers)
         self.output_linear = nn.Linear(d_model, 1)  # 将d_model维映射回1维输出
-        self.dropout = nn.Dropout(dropout)  # 添加Dropout层以防止过拟合
+        # self.dropout = nn.Dropout(dropout)  # 添加Dropout层以防止过拟合
         
-
+    # def forward(self, src, tgt, src_mask=None, tgt_mask=None):
+    #     # 将输入数据从 [batch_size, T, 1] 转换为 [T, batch_size, d_model]
+    #     src = src.transpose(0, 1).squeeze(-1)  # 从 [batch_size, T, 1] 转换为 [T, batch_size]
+    #     src = src.unsqueeze(-1)  # 添加一个维度，使其形状为 [T, batch_size, 1]
+    #     src = self.input_linear(src)  # 从 [T, batch_size, 1] 转换为 [T, batch_size, d_model] [9,16,32]
+    #     src = self.pos_encoder(src)  # 添加位置编码
+    #     src = src.transpose(0, 1)  # 转换为 [batch_size, T, d_model]
+            
+    #     # 编码器输出
+    #     encoder_output = self.transformer_encoder(src, src_key_padding_mask=src_mask)  # 通过Transformer编码器
+            
+    #     # 解码器部分
+    #     tgt = tgt[:,1:9,:]
+    #     tgt = tgt.transpose(0, 1).squeeze(-1)  # 从 [batch_size, N, 1] 转换为 [N, batch_size]
+    #     tgt = tgt.unsqueeze(-1)  # 添加一个维度，使其形状为 [N, batch_size, 1]
+    #     tgt = self.input_linear(tgt)  # 从 [N, batch_size, 1] 转换为 [N, batch_size, d_model]
+    #     tgt = self.pos_encoder(tgt)  # 添加位置编码
+    #     tgt = tgt.transpose(0, 1)  # 转换为 [batch_size, N, d_model]
+    #     # 获取 tgt 的维度信息
+    #     batch_size1, seq_len1, d_model1 = tgt.size()
+    #     padding = torch.zeros((batch_size1,1,d_model1))
+    #     tgt = torch.cat((padding, tgt), dim=1)
+        
+    #     # 解码器输出
+    #     output = self.transformer_decoder(tgt, encoder_output, tgt_mask=tgt_mask)  # 通过Transformer解码器
+    #     output = output.transpose(0, 1)  # 转换回 [batch_size, N, d_model]
+    #     return output
+    
     def forward(self, src, tgt, src_mask=None, tgt_mask=None):
-        # 将输入数据从 [batch_size, T, 1] 转换为 [T, batch_size, d_model]
-        src = src.transpose(0, 1).squeeze(-1)  # 从 [batch_size, T, 1] 转换为 [T, batch_size]
+        # 将输入数据从 [batch_size, seq_len, 1] 转换为 [seq_len, batch_size]
+        src = src.squeeze(-1).transpose(0, 1)  # 从 [batch_size, seq_len, 1] 转换为 [seq_len, batch_size]
+        tgt = tgt[:,1:9,:]
+        tgt = tgt.squeeze(-1).transpose(0, 1)  # 从 [batch_size, seq_len, 1] 转换为 [seq_len, batch_size]
+        
+        # # # 使用Embedding层替换原来的线性层
+        # src = self.input_embedding(src.long())  # 从 [seq_len, batch_size] 转换为 [seq_len, batch_size, d_model]
+        # tgt = self.input_embedding(tgt.long())  # 从 [seq_len, batch_size] 转换为 [seq_len, batch_size, d_model]
         src = src.unsqueeze(-1)  # 添加一个维度，使其形状为 [T, batch_size, 1]
-        src = self.input_linear(src)  # 从 [T, batch_size, 1] 转换为 [T, batch_size, d_model]
+        src = self.input_linear(src)  # 从 [seq_len, batch_size] 转换为 [seq_len, batch_size, d_model]
+        tgt = tgt.unsqueeze(-1)  # 添加一个维度，使其形状为 [T, batch_size, 1]
+        tgt = self.input_linear(tgt)  # 从 [seq_len, batch_size] 转换为 [seq_len, batch_size, d_model]
+        
         src = self.pos_encoder(src)  # 添加位置编码
-        src = src.transpose(0, 1)  # 转换为 [batch_size, T, d_model]
+        tgt = self.pos_encoder(tgt)  # 添加位置编码
+        srggr
+        seq_len1, batch_size1, d_model1 = tgt.size()
+        padding = torch.zeros((1,batch_size1,d_model1))
+        tgt = torch.cat((padding, tgt), dim=0)
+        
+        # 转换回 [batch_size, seq_len, d_model]
+        src = src.transpose(0, 1)  # 从 [seq_len, batch_size, d_model] 转换为 [batch_size, seq_len, d_model]
+        tgt = tgt.transpose(0, 1)  # 从 [seq_len, batch_size, d_model] 转换为 [batch_size, seq_len, d_model]
         
         # 编码器输出
         encoder_output = self.transformer_encoder(src, src_key_padding_mask=src_mask)  # 通过Transformer编码器
         
-        # 解码器部分
-        tgt = tgt.transpose(0, 1).squeeze(-1)  # 从 [batch_size, N, 1] 转换为 [N, batch_size]
-        tgt = tgt.unsqueeze(-1)  # 添加一个维度，使其形状为 [N, batch_size, 1]
-        tgt = self.input_linear(tgt)  # 从 [N, batch_size, 1] 转换为 [N, batch_size, d_model]
-        tgt = self.pos_encoder(tgt)  # 添加位置编码
-        tgt = tgt.transpose(0, 1)  # 转换为 [batch_size, N, d_model]
-        
         # 解码器输出
         output = self.transformer_decoder(tgt, encoder_output, tgt_mask=tgt_mask)  # 通过Transformer解码器
-        output = output.transpose(0, 1)  # 转换回 [batch_size, N, d_model]
-        return output
+        return output    
   
 
 class PositionalEncoding(nn.Module):
@@ -71,6 +109,7 @@ d_hid = 128  # 前馈网络的维度
 nlayers = 6  # 编码器层的数量
 dropout = 0.1  # Dropout率
 max_len = 9  # 最大序列长度
+num_embeddings = 10  # 词典大小
 
 # 创建数据集实例
 train_db = StockDataset(mode="train", dim_x=9)
@@ -99,7 +138,7 @@ for epoch in range(num_epochs):
         X = X.view(-1, 9, 1)  # 重新塑形X以匹配模型的输入要求，形状为[batch_size, seq_len, 1]
         optimizer.zero_grad()
         output = model(X, X, src_mask=None, tgt_mask=None)  # 使用X作为目标输入
-        output_last_step = output[-1, :, :]  # 选择输出的最后一个时间步作为预测值
+        output_last_step = output[ :, -1, :]  # 选择输出的最后一个时间步作为预测值
         output_last_step = output_last_step[:,-1]
         loss = criterion(output_last_step, y)  # 确保输出和目标尺寸匹配        
         optimizer.step()
@@ -108,3 +147,17 @@ for epoch in range(num_epochs):
     
 # 保存模型
 torch.save(model.state_dict(), 'transformer_model.pth')
+
+# # 测试模型
+# model.eval()
+# with torch.no_grad():
+#     running_loss = 0.0
+#     for X, y in test_loader:
+#         # 调整X的形状以匹配模型的输入要求
+#         X = X.view(-1, 9, 1)  # 重新塑形X以匹配模型的输入要求，形状为[batch_size, seq_len, 1]
+#         output = model(X, X, src_mask=None, tgt_mask=None)  # 使用X作为目标输入
+#         output_last_step = output[-1, :, :]  # 选择输出的最后一个时间步作为预测值
+#         output_last_step = output_last_step[:,-1]
+#         loss = criterion(output_last_step, y)  # 确保输出和目标尺寸匹配
+#         running_loss += loss.item()
+#     print(f'Test Loss: {running_loss / len(test_loader)}')

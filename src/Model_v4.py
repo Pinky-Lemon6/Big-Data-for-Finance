@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from torch import optim
-from Dataset_v1 import StockDataset
+from Dataset4web import StockDataset
 from torch.utils.data import DataLoader
 import os
 import numpy as np
@@ -13,7 +13,7 @@ torch.set_printoptions(threshold=float('inf'))
 current_directory = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("cuda:0")
 batch_size = 16
-epochs = 1000
+epochs = 2
 lr = 0.0001
 cores = 7
 
@@ -121,7 +121,7 @@ def main():
             if batch_idx % 100 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(X), train_db.__len__(),
-                        100. * batch_idx / train_db.__len__(), loss.item()))
+                        100. * batch_idx* batch_size / train_db.__len__(), loss.item()))
         
         my_model.eval()
         test_loss = 0
@@ -134,7 +134,8 @@ def main():
         test_loss /= test_db.__len__()
         
         print('Validation set: Average loss: {:.4f}\n'.format(test_loss))
-
+    # 保存模型
+    torch.save(my_model.state_dict(), 'transformer_model.pth')
 
 if __name__ == "__main__":
     freeze_support()

@@ -99,7 +99,13 @@ class StockDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return self.data[idx]
+        line = self.data[idx]
+        line = line.strip("\n")
+        x = [float(i) for i in line.split(",")[:-1]]
+        y = float(line.split(",")[-1])
+        X = torch.tensor(x).to(torch.float32)
+        y = torch.tensor(y).to(torch.float32)
+        return X, y
 
 
 
