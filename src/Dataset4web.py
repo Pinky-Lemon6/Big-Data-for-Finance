@@ -19,11 +19,9 @@ class StockDataset(Dataset):
 
         self.file_list_name = os.path.join(self.root, "file_list.csv") # file_list.txt存放每只股票数据的文件名
         self.load_dataset()
+        self.read_dataset()
 
-        self.len = -1
-        with open(os.path.join(self.root, self.dataset_name), "r") as f:
-            for line in f:
-                self.len += 1
+        
 
     def load_csv(self):
         # 获取所有子数据集文件名
@@ -90,22 +88,18 @@ class StockDataset(Dataset):
                         # break
         self.dataset_name = dataset_name
 
-                
-    def __len__(self):
-        return self.len
-
-    def __getitem__(self, idx):
-        cnt = 0
+    def read_dataset(self):
+        self.data = []
         with open(os.path.join(self.root, self.dataset_name)) as f:
             for line in f:
-                line = line.strip("\n")
-                if cnt == idx:
-                    x = [float(i) for i in line.split(",")[:-1]]
-                    y = float(line.split(",")[-1])
-                    X = torch.tensor(x).to(torch.float32)
-                    y = torch.tensor(y).to(torch.float32)
-                    return X, y
-                cnt += 1
+                self.data.append(line)
+
+                
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
 
 
 
