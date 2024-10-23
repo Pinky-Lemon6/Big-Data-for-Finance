@@ -101,8 +101,6 @@ def main():
         my_model.train()
         for batch_idx, (X, y) in enumerate(train_loader):
             # print(batch_idx)
-            if batch_idx == 31:
-                pass
             X -= mean
             X /= np.sqrt(var)
             y -= mean
@@ -125,12 +123,19 @@ def main():
         
         my_model.eval()
         test_loss = 0
-        for (_, x, y) in test_loader:
-            x, y = x.to(device), y.to(device)
-            pred = my_model(x)
+        for (X, y) in test_loader:
+            X -= mean
+            X /= np.sqrt(var)
+            y -= mean
+            y /= np.sqrt(var)
+            src = X.to(device)
+            tgt = src[:, 1: ]
+            y = y.to(device)
+            pred = my_model(src, tgt)
             loss = criterion(pred, y).item()
             test_loss += loss
         
+        test_loss *= batch_size
         test_loss /= test_db.__len__()
         
         print('Validation set: Average loss: {:.4f}\n'.format(test_loss))
