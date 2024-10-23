@@ -2,3 +2,4 @@
 file_list.csv
 all_stocks_5yr_clean_9T_train.csv
 all_stocks_5yr_clean_9T_test.csv
+mean_std.npy
