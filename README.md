@@ -41,7 +41,7 @@ To utilize the resources in this repository, follow these steps:
 
 1. **Clone the Repository**:
     ```bash
-    git clone https://github.com/yourusername/Big-Data-for-Finance.git
+    git clone https://github.com/Pinky-Lemon6/Big-Data-for-Finance.git
     ```
 
 2. **Navigate to the Directory**:
@@ -56,17 +56,16 @@ To utilize the resources in this repository, follow these steps:
     ```
 
 
-
 4. **Train the Model**:
     To train the model, run the `model_train.py` script:
     ```bash
-    python model_train.py
+    python3 model_train.py
     ```
 
 5. **Test the Model**:
     After training, evaluate the model's performance using:
     ```bash
-    python model_test.py
+    python3 model_test.py
     ```
 
 6. **View Presentations**:
