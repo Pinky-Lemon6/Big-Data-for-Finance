@@ -172,8 +172,8 @@ def main():
     final_epoch = 1
     param_dir = os.path.join(current_directory, f'../model/transformer_model_epoch{final_epoch}.pth')
     my_model.load_params(param_dir)
-    my_model.eval(my_model, criterion, test_db, test_loader, mean, var)
-    model_test()
+    my_model.eval()
+    model_test(my_model, criterion, test_db, test_loader, mean, var)
 
     
     
