@@ -8,9 +8,9 @@ from Model_v4 import TransformerModel, get_params
 # 确保导入了模型和数据集
 from Dataset4web import StockDataset
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-batch_size = 16
+
+
 
 
 def mean_absolute_percentage_error(y_pred, y_true):
@@ -20,7 +20,7 @@ def mean_absolute_percentage_error(y_pred, y_true):
     return ret
 
 
-def model_eval(model, criterion, test_db, test_loader, mean, var):
+def model_eval(model, criterion, test_db, test_loader, mean, var, device):
     test_loss = 0
     y_true = []
     y_pred = []
@@ -57,6 +57,8 @@ def model_eval(model, criterion, test_db, test_loader, mean, var):
 
 
 def main():
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    batch_size = 16
     mean, var = get_params()
     test_db = StockDataset(dim_x=9, mode="test")
     test_loader = DataLoader(test_db, batch_size=16, shuffle=False, num_workers=7)
