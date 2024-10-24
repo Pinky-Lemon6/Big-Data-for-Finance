@@ -29,17 +29,17 @@ cores = 7
 
 def get_params():
     """查询数据集的均值方差"""
-    if not os.path.exists("./mean_var.txt"):
+    if not os.path.exists(os.path.join(current_directory, "./mean_var.txt")):
         import pandas as pd
         data_dir = os.path.join(current_directory, "../Dataset/S&P500/all_stocks_5yr.csv")
         data = pd.read_csv(data_dir)
         close = np.array(data["close"].to_list())
         mean, var = close.mean(), close.var()
-        with open("./mean_var.txt", "w") as f:
+        with open(os.path.join(current_directory, "./mean_var.txt"), "w") as f:
             f.write(str(mean))
             f.write("\t")
             f.write(str(var))
-    with open("./mean_var.txt", "r") as f:
+    with open(os.path.join(current_directory, "./mean_var.txt"), "r") as f:
         for line in f:
             mean, var = line.strip().split("\t")
             mean = float(mean)
@@ -101,7 +101,7 @@ class TransformerModel(nn.Module):
 
 def model_val(model, criterion, val_db, val_loader, mean, var):
     """模型验证"""
-    pval_loss = 0
+    val_loss = 0
     for (X, y) in val_loader:
         X -= mean
         X /= np.sqrt(var)
@@ -163,13 +163,14 @@ def main():
                     epoch, batch_idx * len(X), train_db.__len__(),
                         100. * batch_idx* batch_size / train_db.__len__(), loss.item()))
         
-        torch.save(my_model.state_dict(), f'../transformer_model_epoch{epoch}.pth') # 保存模型
+        torch.save(my_model.state_dict(), os.path.join(current_directory, f'../model/transformer_model_epoch{epoch}.pth')) # 保存模型
         # 验证集
         my_model.eval()
         model_val(my_model, criterion, val_db, val_loader, mean, var)
 
     # 模型评估
-    param_dir = ""
+    final_epoch = 1
+    param_dir = os.path.join(current_directory, f'../model/transformer_model_epoch{final_epoch}.pth')
     my_model.load_params(param_dir)
     my_model.eval(my_model, criterion, test_db, test_loader, mean, var)
     model_test()
