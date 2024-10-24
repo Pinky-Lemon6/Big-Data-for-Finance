@@ -58,7 +58,7 @@ class StockDataset(Dataset):
                     data["date"] = data["date"].apply(self.standard_date)
                     data = data[data.date<self.split_date]
                     data = data.sort_values(by = "date", ascending=True).reset_index()
-                    for i in range(self.dim_x, len(data)-self.dim_x-1, 1):
+                    for i in range(0, len(data)-self.dim_x-1, 1):
                         x = data.loc[i:i+self.dim_x, "close"].to_list() # X=x[:-1], y=x[-1]
                         with open(os.path.join(self.root, dataset_name), "a") as f:
                             f.write(",".join([str(i) for i in x]))
