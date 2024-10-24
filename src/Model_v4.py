@@ -7,8 +7,18 @@ from torch.utils.data import DataLoader
 import os
 import numpy as np
 from multiprocessing import freeze_support
+import random
 
-torch.set_printoptions(threshold=float('inf'))
+torch.set_printoptions(threshold=float('inf')) # torch打印无限制
+
+seed=1234 # 设置随机数种子
+torch.manual_seed(seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+np.random.seed(seed)
+random.seed(seed)
+
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("cuda:0")
@@ -58,7 +68,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, src_len, tgt_len, d_model, nhead, d_hid, nlayers, dropout=0.1):
+    def __init__(self, src_len, tgt_len, d_model, nhead, d_hid, nlayers, batch_size, dropout=0.1):
         super(TransformerModel, self).__init__()
         self.embedding1 = nn.Linear(in_features=src_len, out_features=d_model)
         self.embedding2 = PositionalEncoding(d_model=d_model, batch_size=batch_size)
@@ -72,6 +82,10 @@ class TransformerModel(nn.Module):
         self.transformer_decoder = nn.TransformerDecoder(self.decoder_layer, num_layers=nlayers)
         self.output_linear = nn.Linear(d_model, 1)  # 将d_model维映射回1维输出
         self.dropout = nn.Dropout(dropout)  # 添加Dropout层以防止过拟合
+    
+    def load_params(self, path):
+        params = torch.load(path)
+        self.load_state_dict(params)
 
     def forward(self, src, tgt, src_mask=None, tgt_mask=None):
         src = self.embedding1(src)
@@ -85,19 +99,47 @@ class TransformerModel(nn.Module):
         output = output.transpose(0, 1)
         return output
 
+def model_val(model, criterion, val_db, val_loader, mean, var):
+    """模型验证"""
+    pval_loss = 0
+    for (X, y) in val_loader:
+        X -= mean
+        X /= np.sqrt(var)
+        y -= mean
+        y /= np.sqrt(var)
+        src = X.to(device)
+        tgt = src[:, 1: ]
+        y = y.to(device)
+        pred = model(src, tgt)
+        loss = criterion(pred, y).item()
+        val_loss += loss*X.size(0)
+    
+    val_loss /= val_db.__len__()
+    print('Validation set: Average loss: {:.4f}\n'.format(val_loss))
+
+
+
+def model_test(model, criterion, test_db, test_loader, mean, var):
+    """TODO:最终模型评估"""
+    pass
+
 
 def main():
     mean, var = get_params() # 获取原数据集均值方差
     train_db = StockDataset(dim_x=9, mode="train")
     test_db = StockDataset(dim_x=9, mode="test")
+    train_db, val_db = torch.utils.data.random_split(train_db, [train_db.__len__()-test_db.__len__(), test_db.__len__()]) # 划分训练集、验证集
     train_loader = DataLoader(train_db, batch_size=batch_size, shuffle=True, num_workers=cores)
+    val_loader = DataLoader(val_db, batch_size=batch_size, shuffle=False, num_workers=cores)
     test_loader = DataLoader(test_db, batch_size=batch_size, shuffle=False, num_workers=cores)
 
-    my_model = TransformerModel(src_len=9, tgt_len=8, d_model=32, nhead=4, d_hid=128, nlayers=6).to(device)
+    my_model = TransformerModel(src_len=9, tgt_len=8, d_model=32, nhead=4, d_hid=128, 
+                                nlayers=6, batch_size=batch_size).to(device)
     optimizer = optim.Adam(my_model.parameters(), lr=lr)
     criterion = nn.MSELoss().to(device)
 
     for epoch in range(epochs):
+        # TODO:loss曲线
         my_model.train()
         for batch_idx, (X, y) in enumerate(train_loader):
             # print(batch_idx)
@@ -121,26 +163,19 @@ def main():
                     epoch, batch_idx * len(X), train_db.__len__(),
                         100. * batch_idx* batch_size / train_db.__len__(), loss.item()))
         
+        torch.save(my_model.state_dict(), f'../transformer_model_epoch{epoch}.pth') # 保存模型
+        # 验证集
         my_model.eval()
-        test_loss = 0
-        for (X, y) in test_loader:
-            X -= mean
-            X /= np.sqrt(var)
-            y -= mean
-            y /= np.sqrt(var)
-            src = X.to(device)
-            tgt = src[:, 1: ]
-            y = y.to(device)
-            pred = my_model(src, tgt)
-            loss = criterion(pred, y).item()
-            test_loss += loss
-        
-        test_loss *= batch_size
-        test_loss /= test_db.__len__()
-        
-        print('Validation set: Average loss: {:.4f}\n'.format(test_loss))
-    # 保存模型
-    torch.save(my_model.state_dict(), 'transformer_model.pth')
+        model_val(my_model, criterion, val_db, val_loader, mean, var)
+
+    # 模型评估
+    param_dir = ""
+    my_model.load_params(param_dir)
+    my_model.eval(my_model, criterion, test_db, test_loader, mean, var)
+    model_test()
+
+    
+    
 
 if __name__ == "__main__":
     freeze_support()
