@@ -15,6 +15,9 @@ class StockDataset(Dataset):
         self.dim_x = dim_x
         self.mode = mode
 
+        self.black_lst = ["ADS","AGN","AMZN","AZO","BIIB","BLK","CHTR","CMG","EQIX",
+                          "ESS","GOOG","GOOGL","GWW","ISRG","LMT","MTD","ORLY","PCLN",
+                          "REGN","SHW","TDG",] # 黑名单，这些股票的均值明显偏离其余
         self.split_date = "2017-01-30" # 所有日期>=split_date的数据均为测试集
 
         self.file_list_name = os.path.join(self.root, "file_list.csv") # file_list.txt存放每只股票数据的文件名
@@ -30,7 +33,8 @@ class StockDataset(Dataset):
             cnt = 0
             for name in os.listdir(os.path.join(self.root, "individual_stocks_5yr/individual_stocks_5yr")):
                 if name.endswith(".csv"):
-                    file_list.append(os.path.normpath(os.path.join(self.root, "individual_stocks_5yr/individual_stocks_5yr", name)))
+                    if not name.replace("_data.csv", "") in self.black_lst:
+                        file_list.append(os.path.normpath(os.path.join(self.root, "individual_stocks_5yr/individual_stocks_5yr", name)))
             print(f"total csv_files: {len(file_list)}")
             with open(self.file_list_name, "w") as f:
                 for file_name in file_list:

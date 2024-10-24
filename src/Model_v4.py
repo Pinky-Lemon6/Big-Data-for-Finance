@@ -62,7 +62,7 @@ class PositionalEncoding(nn.Module):
         self.pe_embedding_table = pe_embedding_table.to(device)
 
     def forward(self, x):
-        x = x + self.pe_embedding_table[:x.size(0), :]
+        x = x + self.pe_embedding_table[:x.size(0), :].detach()
         return self.dropout(x)
 
 
@@ -96,7 +96,9 @@ class TransformerModel(nn.Module):
         tgt = self.embedding3(tgt)
         tgt = self.embedding4(tgt)
         output = self.transformer_decoder(tgt, encoder_output, tgt_mask=tgt_mask)  # 通过Transformer解码器
-        output = output.transpose(0, 1)
+        output = self.output_linear(output)
+        # print(output.size())
+        # output = output.transpose(0, 1)
         return output
 
 def model_val(model, criterion, val_db, val_loader, mean, var):
@@ -109,7 +111,7 @@ def model_val(model, criterion, val_db, val_loader, mean, var):
         y /= np.sqrt(var)
         src = X.to(device)
         tgt = src[:, 1: ]
-        y = y.to(device)
+        y = y.unsqueeze(1).to(device)
         pred = model(src, tgt)
         loss = criterion(pred, y).item()
         val_loss += loss*X.size(0)
@@ -135,7 +137,7 @@ def main():
 
     my_model = TransformerModel(src_len=9, tgt_len=8, d_model=32, nhead=4, d_hid=128, 
                                 nlayers=6, batch_size=batch_size).to(device)
-    optimizer = optim.Adam(my_model.parameters(), lr=lr)
+    optimizer = optim.SGD(my_model.parameters(), lr=lr)
     criterion = nn.MSELoss().to(device)
 
     for epoch in range(epochs):
@@ -149,7 +151,7 @@ def main():
             y /= np.sqrt(var)
             src = X.to(device)
             tgt = src[:, 1: ]
-            y = y.to(device)
+            y = y.unsqueeze(1).to(device)
 
             pred = my_model(src, tgt)
             loss = criterion(pred, y)
