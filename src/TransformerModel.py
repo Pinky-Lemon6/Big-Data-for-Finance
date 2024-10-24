@@ -1,19 +1,20 @@
 import torch
 from torch import nn
+import os
 import numpy as np
 import random
 
 class TransformerModel(nn.Module):
-    def __init__(self, src_len, tgt_len, d_model, nhead, d_hid, nlayers, batch_size, dropout=0.1):
+    def __init__(self, src_len, tgt_len, d_model, nhead, d_hid, nlayers, batch_size, device, dropout=0.1):
         super(TransformerModel, self).__init__()
         self.embedding1 = nn.Linear(in_features=src_len, out_features=d_model)
-        self.embedding2 = PositionalEncoding(d_model=d_model, batch_size=batch_size)
+        self.embedding2 = PositionalEncoding(d_model=d_model, batch_size=batch_size, device=device)
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_hid, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=nlayers)
         # self.linear = nn.Linear(in_features=d_model, out_features=tgt_len)
 
         self.embedding3 = nn.Linear(in_features=tgt_len, out_features=d_model)
-        self.embedding4 = PositionalEncoding(d_model=d_model, batch_size=batch_size)
+        self.embedding4 = PositionalEncoding(d_model=d_model, batch_size=batch_size, device=device)
         self.decoder_layer = nn.TransformerDecoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_hid, dropout=dropout)
         self.transformer_decoder = nn.TransformerDecoder(self.decoder_layer, num_layers=nlayers)
         self.output_linear = nn.Linear(d_model, 1)  # 将d_model维映射回1维输出
@@ -39,7 +40,7 @@ class TransformerModel(nn.Module):
     
     
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, batch_size, dropout=0.1):
+    def __init__(self, d_model, batch_size, device, dropout=0.1):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -60,10 +61,16 @@ class PositionalEncoding(nn.Module):
     
        
 if __name__ == "__main__":
+    seed=1234 # 设置随机数种子
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    device = torch.device("cuda:0")
     # 设置随机种子以确保可重复性
-    torch.manual_seed(0)
-    np.random.seed(0)
-    random.seed(0)
 
     # 模型参数
     src_len = 10
@@ -75,11 +82,11 @@ if __name__ == "__main__":
     batch_size = 32
 
     # 创建模型实例
-    model = TransformerModel(src_len, tgt_len, d_model, nhead, d_hid, nlayers, batch_size)
+    model = TransformerModel(src_len, tgt_len, d_model, nhead, d_hid, nlayers, batch_size, device=device).to(device)
 
     # 创建随机输入数据
-    src = torch.rand(batch_size, src_len)
-    tgt = torch.rand(batch_size, tgt_len)
+    src = torch.rand(batch_size, src_len).to(device)
+    tgt = torch.rand(batch_size, tgt_len).to(device)
 
     # 前向传播
     output = model(src, tgt)

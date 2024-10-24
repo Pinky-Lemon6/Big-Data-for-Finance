@@ -106,7 +106,9 @@ class StockDataset(Dataset):
         return X, y
 
 
-def main():
+
+
+if __name__ == "__main__":
     batch_size=32
     train_db = StockDataset(mode="train", dim_x=9)
     test_db = StockDataset(mode="test", dim_x=9)
@@ -118,8 +120,3 @@ def main():
     for X, y in test_loader:
         print(X.size(), y)
         break
-    
-
-if __name__ == "__main__":
-    main()
-    
