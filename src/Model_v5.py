@@ -9,7 +9,6 @@ import numpy as np
 from multiprocessing import freeze_support
 import random
 
-
 torch.set_printoptions(threshold=float("inf"))  # torch打印无限制
 
 seed = 1234  # 设置随机数种子
@@ -137,13 +136,36 @@ def model_val(model, criterion, val_db, val_loader, mean, var):
     print("Validation set: Average loss: {:.4f}\n".format(val_loss))
 
 
+def model_test(model, criterion, test_db, test_loader, mean, var):
+    """最终模型评估"""
+    test_loss = 0
+    with torch.no_grad():  # 在测试阶段不计算梯度
+        for X, y in test_loader:
+            X -= mean
+            X /= np.sqrt(var)
+            y -= mean
+            y /= np.sqrt(var)
+            src = X.to(device)
+            tgt = src[:, 1:]
+            y = y.to(device)
+            pred = model(src, tgt)
+            loss = criterion(pred, y).item()
+            test_loss += loss * X.size(0)
+
+    test_loss /= test_db.__len__()
+    print("Test set: Average loss: {:.4f}\n".format(test_loss))
+
+
 def main():
+    train_losses = []  # 用于存储每个epoch的训练损失
+    val_losses = []  # 用于存储每个epoch的验证损失
+
     mean, var = get_params()  # 获取原数据集均值方差
     train_db = StockDataset(dim_x=9, mode="train")
     test_db = StockDataset(dim_x=9, mode="test")
     train_db, val_db = torch.utils.data.random_split(
         train_db, [train_db.__len__() - test_db.__len__(), test_db.__len__()]
-    )
+    )  # 划分训练集、验证集
     train_loader = DataLoader(
         train_db, batch_size=batch_size, shuffle=True, num_workers=cores
     )
@@ -166,13 +188,13 @@ def main():
     optimizer = optim.Adam(my_model.parameters(), lr=lr)
     criterion = nn.MSELoss().to(device)
 
-    train_losses = []
-    val_losses = []
-
     for epoch in range(epochs):
         my_model.train()
+
         epoch_train_loss = 0
+
         for batch_idx, (X, y) in enumerate(train_loader):
+            # print(batch_idx)
             X -= mean
             X /= np.sqrt(var)
             y -= mean
@@ -188,7 +210,8 @@ def main():
             loss.backward()
             optimizer.step()
 
-            epoch_train_loss += loss.item()
+            epoch_train_loss += loss.item() * X.size(0)
+
             if batch_idx % 100 == 0:
                 print(
                     "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
@@ -199,36 +222,49 @@ def main():
                         loss.item(),
                     )
                 )
-
-        epoch_train_loss /= len(train_loader)
+        epoch_train_loss /= train_db.__len__()
         train_losses.append(epoch_train_loss)
-        print(
-            "Epoch {}: Average training loss: {:.4f}\n".format(epoch, epoch_train_loss)
-        )
 
-        # 保存模型
         torch.save(
             my_model.state_dict(),
             os.path.join(
                 current_directory, f"../model/transformer_model_epoch{epoch}.pth"
             ),
-        )
+        )  # 保存模型
+        # 验证集
+        my_model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for X, y in val_loader:
+                X -= mean
+                X /= np.sqrt(var)
+                y -= mean
+                y /= np.sqrt(var)
+                src = X.to(device)
+                tgt = src[:, 1:]
+                y = y.to(device)
+                pred = my_model(src, tgt)
+                loss = criterion(pred, y)
+                val_loss += loss.item() * X.size(0)
+
+        val_loss /= val_db.__len__()
+        val_losses.append(val_loss)
+
     # 保存损失数据到文件
-    np.savez("loss_data.npz", train_losses=train_losses, val_losses=val_losses)
+    np.savez(
+        "loss_data.npz",
+        train_losses=train_losses,
+        val_losses=val_losses,
+    )
 
-    # # 使用 model_eval.py 中的 model_eval 函数进行验证集和测试集的评估
-    # my_model.eval()
-    # val_loss = model_eval(my_model, criterion, val_loader, mean, var)
-    # val_losses.append(val_loss)
-
-    # # 加载最终模型并进行测试集的评估
-    # final_epoch = 1
-    # param_dir = os.path.join(
-    #     current_directory, f"../model/transformer_model_epoch{final_epoch}.pth"
-    # )
-    # my_model.load_state_dict(torch.load(param_dir, map_location=device))
-    # my_model.eval()
-    # model_eval(my_model, criterion, test_loader, mean, var)
+    # 模型评估
+    final_epoch = 1
+    param_dir = os.path.join(
+        current_directory, f"../model/transformer_model_epoch{final_epoch}.pth"
+    )
+    my_model.load_params(param_dir)
+    my_model.eval()
+    model_test(my_model, criterion, test_db, test_loader, mean, var)
 
 
 if __name__ == "__main__":
