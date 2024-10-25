@@ -114,9 +114,11 @@ if __name__ == "__main__":
     test_db = StockDataset(mode="test", dim_x=9)
     train_loader = DataLoader(train_db, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_db, batch_size=batch_size, shuffle=True)
+    print(train_db.__len__())
     for X, y in train_loader:
         print(X.size(), y)
         break
+    print(test_db.__len__())
     for X, y in test_loader:
         print(X.size(), y)
         break

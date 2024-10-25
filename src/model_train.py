@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from torch import optim
-from Dataset4web import StockDataset
 from torch.utils.data import DataLoader
 import os
 import numpy as np
@@ -14,7 +13,7 @@ from StockDataset import StockDataset
 
 
 def main():
-    seed=1234 # 设置随机数种子
+    seed=16384 # 设置随机数种子
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
@@ -24,8 +23,8 @@ def main():
 
     current_directory = os.path.dirname(os.path.abspath(__file__))
     device = torch.device("cuda:0")
-    batch_size = 16
-    epochs = 2
+    batch_size = 128
+    epochs = 50
     lr = 0.0001
     cores = 7
 
@@ -66,19 +65,22 @@ def main():
             loss.backward()
             optimizer.step()
 
-            epoch_train_loss += loss.item() * X.size(0)
+            # epoch_train_loss += loss.item() * X.size(0)
 
-            if batch_idx % 100 == 0:
+            if batch_idx % 1000 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(X), train_db.__len__(),
                         100. * batch_idx* batch_size / train_db.__len__(), loss.item()))
         
-        epoch_train_loss /= train_db.__len__()
-        train_losses.append(epoch_train_loss)
+        # epoch_train_loss /= train_db.__len__()
+        # train_losses.append(epoch_train_loss)
         torch.save(my_model.state_dict(), os.path.join(current_directory, f'../model/transformer_model_epoch{epoch}.pth')) # 保存模型
         # 验证集
         my_model.eval()
+        # print('train set: Average loss: {:.4f}\n'.format(epoch_train_loss))
+        epoch_train_loss = model_val(my_model, criterion, train_db, train_loader, mean, var, device)
         epoch_valid_loss = model_val(my_model, criterion, val_db, val_loader, mean, var, device)
+        train_losses.append(epoch_train_loss)
         val_losses.append(epoch_valid_loss)
     plot_loss(train_losses=train_losses, val_losses=val_losses)
 
